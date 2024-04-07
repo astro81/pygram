@@ -1,0 +1,44 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+venv/
+env/
+ENV/
+.venv/
+*.env
+*.venv
+
+# Django/migrations
+db.sqlite3
+*.sqlite3
+media/
+staticfiles/
+*.log
+*.pot
+*.pyc
+*.mo
+local_settings.py
+instance/
+.DS_Store
+
+# Migrations
+*/migrations/__pycache__/
+*/migrations/*.pyc
+*/migrations/*.py
+!*/migrations/__init__.py
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+
+
+# Environment
+.env
+.env.*
