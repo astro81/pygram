@@ -1,7 +1,7 @@
 from django.contrib.auth import authenticate
 from django.db import DatabaseError
 from rest_framework.exceptions import ValidationError
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
@@ -45,5 +45,17 @@ class UserLoginView(APIView):
 
         except Token.DoesNotExist:
             return Response({'error': 'Token error'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        except Exception as e:
+            return Response({'error': 'Something went wrong'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+class UserLogoutView(APIView):
+    permission_classes = [IsAuthenticated]
+    def post(self, request):
+        try:
+            request.user.auth_token.delete()
+            return Response({'message': 'User logged out'}, status=status.HTTP_200_OK)
+
+        except (AttributeError, Token.DoesNotExist):
+            return Response({'message': 'Token Not Found'}, status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
             return Response({'error': 'Something went wrong'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
