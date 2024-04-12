@@ -37,7 +37,7 @@ instance/
 .vscode/
 .idea/
 *.swp
-
+.jetclient
 
 # Environment
 .env
