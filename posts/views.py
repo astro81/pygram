@@ -1,60 +1,54 @@
-from rest_framework import viewsets, status
-from rest_framework.exceptions import ValidationError
+from rest_framework import viewsets
+from rest_framework.exceptions import NotFound
 from rest_framework.permissions import IsAuthenticatedOrReadOnly
-from rest_framework.response import Response
 
 from posts.models import Post
 from posts.serializers import PostSerializer
 from posts.permissions import IsOwnerOrReadOnly
 
 
-# Create your views here.
 class PostViewSet(viewsets.ModelViewSet):
-    permission_classes = [IsAuthenticatedOrReadOnly, IsOwnerOrReadOnly]
+    """
+    ViewSet for managing user posts.
 
+    Allows users to create, retrieve, update, and delete posts.
+    Permissions:
+        - Authenticated users can create posts.
+        - Only post owners can update or delete their posts.
+        - Unauthenticated users have read-only access.
+
+    Supported Actions:
+        - GET (list): Retrieve a list of all posts.
+        - GET (retrieve): Retrieve a specific post by its ID.
+        - POST (create): Create a new post (authenticated users only).
+        - PUT/PATCH (update): Update an existing post (owners only).
+        - DELETE (destroy): Delete a post (owners only).
+    """
+    permission_classes = [IsAuthenticatedOrReadOnly, IsOwnerOrReadOnly]
     queryset = Post.objects.all()
     serializer_class = PostSerializer
 
+    def get_object(self):
+        """
+        Retrieve a Post instance by its ID.
+
+        Raises:
+            NotFound: If no Post with the given ID exists.
+
+        Returns:
+            Post: The retrieved post instance.
+        """
+        try:
+            return super().get_object()
+        except NotFound:
+            raise NotFound(detail="Post not found with given identifier.")
+
     def perform_create(self, serializer):
+        """
+        Save a new Post instance with the current authenticated user as the owner.
+
+        Args:
+            serializer (PostSerializer): Serializer containing validated post data.
+        """
         serializer.save(user=self.request.user)
 
-
-    def create(self, request, *args, **kwargs):
-        try:
-            response = super().create(request, *args, **kwargs)
-            return Response({
-                "message": "Post created successfully!",
-                "data": response.data
-            }, status=status.HTTP_201_CREATED)
-        except ValidationError as e:
-            return Response({
-                "message": "Failed to create post.",
-                "errors": e.detail
-            }, status=status.HTTP_400_BAD_REQUEST)
-
-    def update(self, request, *args, **kwargs):
-        try:
-            response = super().update(request, *args, **kwargs)
-            return Response({
-                "message": "Post updated successfully.",
-                "data": response.data
-            }, status=status.HTTP_200_OK)
-        except ValidationError as e:
-            return Response({
-                "message": "Failed to update post.",
-                "errors": e.detail
-            }, status=status.HTTP_400_BAD_REQUEST)
-
-
-    def destroy(self, request, *args, **kwargs):
-        try:
-            instance: object = self.get_object()
-            self.perform_destroy(instance)
-            return Response({
-                "message": "Post deleted successfully."
-            }, status=status.HTTP_204_NO_CONTENT)
-        except ValidationError as e:
-            return Response({
-                "message": "Failed to delete post.",
-                "errors": e.detail
-            }, status=status.HTTP_400_BAD_REQUEST)

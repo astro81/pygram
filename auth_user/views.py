@@ -8,6 +8,12 @@ from rest_framework import status
 from rest_framework.authtoken.models import Token
 from auth_user.serializers import UserRegistrationSerializer
 
+def handle_exception(error, message="Something went wrong", status_code=status.HTTP_500_INTERNAL_SERVER_ERROR):
+    """Utility function to generate a consistent error response."""
+    return Response(
+        {"message": message, "errors": str(error)},
+        status=status_code,
+    )
 
 class UserRegistrationView(APIView):
     """
@@ -31,7 +37,7 @@ class UserRegistrationView(APIView):
 
             # Check if input data is valid
             if serializer.is_valid():
-                user = serializer.save()
+                serializer.save()
                 return Response(
                     {'message': 'User registered successfully'},
                     status=status.HTTP_201_CREATED
@@ -42,19 +48,16 @@ class UserRegistrationView(APIView):
 
         except ValidationError as ve:
             return Response(
-                {'error': 'Validation error', 'details': str(ve)},
+                {'message': 'Validation error', 'errors': str(ve)},
                 status=status.HTTP_400_BAD_REQUEST
             )
         except DatabaseError as db:
             return Response(
-                {'error': 'Database error', 'details': str(db)},
+                {'message': 'Database error', 'errors': str(db)},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
         except Exception as e:
-            return Response(
-                {'error': 'Something went wrong', 'details': str(e)},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
+            return handle_exception(e)
 
 
 class UserLoginView(APIView):
@@ -81,7 +84,7 @@ class UserLoginView(APIView):
             # Ensure both fields are provided
             if not username or not password:
                 return Response(
-                    {'error': 'Username and password are required'},
+                    {'message': 'Login Failed!', 'errors': 'Username and password are required'},
                     status=status.HTTP_400_BAD_REQUEST
                 )
 
@@ -93,13 +96,10 @@ class UserLoginView(APIView):
                 token, _ = Token.objects.get_or_create(user=user)
                 return Response({'token': token.key}, status=status.HTTP_200_OK)
 
-            return Response({'error': 'Invalid credentials'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'message': 'Login Failed!', 'errors': 'Invalid credentials'}, status=status.HTTP_400_BAD_REQUEST)
 
         except Exception as e:
-            return Response(
-                {'error': 'Something went wrong', 'details': str(e)},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
+            return handle_exception(e)
 
 
 class UserLogoutView(APIView):
@@ -126,11 +126,8 @@ class UserLogoutView(APIView):
 
         except (AttributeError, Token.DoesNotExist):
             return Response(
-                {'error': 'Token not found or already deleted'},
+                {'message': 'Logout Failed!', 'errors': 'Token not found or already deleted'},
                 status=status.HTTP_404_NOT_FOUND
             )
         except Exception as e:
-            return Response(
-                {'error': 'Something went wrong', 'details': str(e)},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
+            return handle_exception(e)

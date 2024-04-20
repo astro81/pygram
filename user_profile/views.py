@@ -60,7 +60,7 @@ class UserProfileView(RetrieveUpdateAPIView):
         PUT is disallowed intentionally to avoid accidental data overwrites.
         """
         return Response(
-            {'detail': 'PUT update not allowed. Use PATCH instead.'},
+            {'message': 'PUT update not allowed. Use PATCH instead.'},
             status=status.HTTP_405_METHOD_NOT_ALLOWED
         )
 
@@ -144,6 +144,6 @@ class UserDeleteProfileView(DestroyAPIView):
         user.delete()
 
         return Response(
-            {'detail': 'Delete profile success'},
+            {'message': 'Delete profile success'},
             status=status.HTTP_204_NO_CONTENT
         )
