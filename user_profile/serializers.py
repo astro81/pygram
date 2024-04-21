@@ -5,53 +5,48 @@ from django.contrib.auth import get_user_model
 # Get the user model (custom or default)
 User = get_user_model()
 
-class UserSerializer(serializers.ModelSerializer):
-    """
-    Serializer for the User model.
-
-    Serializes basic user information including:
-    - id
-    - username
-    - email
-    - first_name
-    - last_name
-    """
-    class Meta:
-        model = User
-        fields = ('id', 'username', 'email', 'first_name', 'last_name')
-
-
 class ProfileSerializer(serializers.ModelSerializer):
     """
-    Serializer for the UserProfile model.
+    Serializer for the UserProfile model with flattened user fields.
 
-    Includes a nested UserSerializer to manage related user fields.
-    Also performs validation to ensure the uniqueness of the username and email.
+    Exposes the related User model's fields (username, email, etc.) directly in the output.
+    Also performs validation to ensure the uniqueness of username and email.
     """
-    user = UserSerializer()
+    user_id = serializers.CharField(source='user.id', read_only=True)
+    username = serializers.CharField(source='user.username')
+    email = serializers.EmailField(source='user.email')
+    first_name = serializers.CharField(source='user.first_name', allow_blank=True)
+    last_name = serializers.CharField(source='user.last_name', allow_blank=True)
 
     class Meta:
         model = UserProfile
-        fields = ['id', 'user', 'profile_pic', 'bio']
-        extra_kwargs = {'user': {'required': True}}
+        fields = [
+            'id',
+            'user_id',
+            'username',
+            'email',
+            'first_name',
+            'last_name',
+            'profile_pic',
+            'bio'
+        ]
 
     def validate(self, attrs):
         """
-        Validate nested user data to ensure that the username and email are unique.
+        Validate nested user data to ensure uniqueness of username and email.
 
         Args:
-            attrs (dict): The attributes to be validated.
+            attrs (dict): The attributes to validate.
 
         Returns:
             dict: Validated attributes.
 
         Raises:
-            serializers.ValidationError: If username or email is already taken.
+            serializers.ValidationError: If username or email already exists.
         """
         user_data = attrs.get('user', {})
         user_instance = self.instance.user if self.instance else None
 
-        # Check if the username is already in use
         username = user_data.get('username')
         if username:
             qs = User.objects.filter(username=username)
@@ -60,7 +55,6 @@ class ProfileSerializer(serializers.ModelSerializer):
             if qs.exists():
                 raise serializers.ValidationError({'username': 'This username is already taken.'})
 
-        # Check if the email is already in use
         email = user_data.get('email')
         if email:
             qs = User.objects.filter(email=email)
@@ -73,28 +67,26 @@ class ProfileSerializer(serializers.ModelSerializer):
 
     def update(self, instance, validated_data):
         """
-        Update an existing UserProfile instance along with its related User data.
+        Update an existing UserProfile instance along with nested User data.
 
         Args:
-            instance (UserProfile): The UserProfile instance to update.
-            validated_data (dict): The validated data for update.
+            instance (UserProfile): The instance to update.
+            validated_data (dict): Validated data.
 
         Returns:
-            UserProfile: The updated UserProfile instance.
+            UserProfile: Updated profile instance.
         """
-        # Extract nested user data
-        user_data = validated_data.pop('user', None)
+        user_data = validated_data.pop('user', {})
 
         # Update UserProfile fields
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
         instance.save()
 
-        # Update related User fields if user data is provided
-        if user_data:
-            user = instance.user
-            for attr, value in user_data.items():
-                setattr(user, attr, value)
-            user.save()
+        # Update nested User fields
+        user = instance.user
+        for attr, value in user_data.items():
+            setattr(user, attr, value)
+        user.save()
 
         return instance
